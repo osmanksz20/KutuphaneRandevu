@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Osman Kütüphane Staj</title>
+
+    <meta name="theme-color" content="#f1f5f9">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'], serif: ['Playfair Display', 'serif'], mono: ['Space Mono', 'monospace'] },
+                    boxShadow: { 'soft': '0 10px 40px -10px rgba(0,0,0,0.08)', 'glow': '0 0 15px rgba(59, 130, 246, 0.5)' }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* GENEL AYARLAR */
+        body {
+            position: relative;
+            color: #1e293b;
+            user-select: none;
+            overflow: hidden;
+            background-color: #f1f5f9;
+            height: 100vh;
+            height: 100dvh;
+            width: 100vw;
+        }
+
+        /* 100dvh mobil tarayıcı çubuğu sorununu çözer */
+        body::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: url('https://images.unsplash.com/photo-1568667256549-094345857637?q=80&w=2000&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            z-index: -2;
+        }
+
+        body::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(255, 253, 245, 0.7), rgba(255, 255, 255, 0.5));
+            backdrop-filter: blur(2px);
+            z-index: -1;
+        }
+
+        /* SCROLLBAR */
+        ::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d6d3d1;
+            border-radius: 10px;
+        }
+
+        .seat {
+            transition: all 0.2s ease;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .seat:active {
+            transform: scale(0.95);
+        }
+
+        .seat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+            z-index: 20;
+            border-color: #94a3b8;
+        }
+
+        .seat-available {
+            background: #ffffff;
+            border: 1px solid #e7e5e4;
+            color: #78716c;
+        }
+
+        .seat-female {
+            background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+            border: 1px solid #fda4af;
+            color: #be123c;
+        }
+
+        .seat-male {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #7dd3fc;
+            color: #0369a1;
+        }
+
+        .seat-break {
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            border: 2px dashed #fb923c;
+            color: #c2410c;
+            animation: pulse-orange 2s infinite;
+        }
+
+        .seat-pc {
+            background: #1c1917;
+            border: 1px solid #44403c;
+            color: #fbbf24;
+            box-shadow: inset 0 0 5px rgba(251, 191, 36, 0.2);
+        }
+
+        /* KOLTUK İÇİ SAAT YAZISI */
+        .seat-time {
+            font-family: 'Space Mono', monospace;
+            font-size: 8px;
+            font-weight: 700;
+            margin-top: 1px;
+            opacity: 0.9;
+            background: rgba(255, 255, 255, 0.4);
+            padding: 0 2px;
+            border-radius: 3px;
+            line-height: 1;
+        }
+
+        @keyframes pulse-orange {
+            0% {
+                box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 6px rgba(251, 146, 60, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(251, 146, 60, 0);
+            }
+        }
+
+        /* MODAL ALTYAPISI */
+        .overlay-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        .custom-modal {
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 350px;
+            text-align: center;
+            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.3);
+            animation: popIn 0.3s ease;
+        }
+
+        .alert-box {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            width: 320px;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            animation: popIn 0.3s ease;
+            position: relative;
+        }
+
+        .alert-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .alert-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            margin-top: 1rem;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+
+        .btn-confirm {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background: #2563eb;
+        }
+
+        .btn-cancel {
+            background: #f1f5f9;
+            color: #64748b;
+            margin-top: 8px;
+        }
+
+        .btn-cancel:hover {
+            background: #e2e8f0;
+        }
+
+        .ticket-card {
+            background: #fdfbf7;
+            color: #1c1917;
+            border-radius: 12px;
+            width: 300px;
+            box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.4);
+            border: 1px solid #d6d3d1;
+            animation: popIn 0.4s ease;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23a8a29e' fill-opacity='0.05'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z'/%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .ticket-header {
+            padding: 1rem;
+            border-bottom: 2px dashed #a8a29e;
+        }
+
+        .ticket-body {
+            padding: 1.5rem;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+        }
+
+        .barcode {
+            height: 30px;
+            background: repeating-linear-gradient(90deg, #1c1917 0px, #1c1917 2px, transparent 2px, transparent 4px);
+            margin-top: 1rem;
+            opacity: 0.8;
+        }
+
+        @keyframes popIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .feature-icon {
+            position: absolute;
+            font-size: 10px;
+            background: white;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            z-index: 5;
+        }
+
+        .icon-top-right {
+            top: -5px;
+            right: -5px;
+        }
+
+        .icon-bottom-right {
+            bottom: -5px;
+            right: -5px;
+        }
+
+        .highlight-seat {
+            animation: pulse-amber 1.5s infinite;
+            border-color: #d97706 !important;
+            border-width: 2px;
+            z-index: 30;
+        }
+
+        select,
+        input {
+            outline: none;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+
+        select:focus,
+        input:focus {
+            border-color: #d97706;
+            box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.1);
+            background: white;
+        }
+
+        .hidden-field {
+            display: none;
+        }
+
+        .toggle-link {
+            cursor: pointer;
+            color: #b45309;
+            font-weight: bold;
+            text-decoration: underline;
+            font-size: 0.7rem;
+            margin-top: 8px;
+            display: inline-block;
+        }
+
+        /* SONSUZ DÖNGÜ CSS */
+        .marquee-container {
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+            mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+        }
+
+        .marquee-content {
+            display: inline-flex;
+            animation: scroll-seamless 20s linear infinite;
+        }
+
+        .marquee-text {
+            color: #b45309;
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            padding-right: 50px;
+            text-shadow: 0 0 1px rgba(180, 83, 9, 0.2);
+        }
+
+        @keyframes scroll-seamless {
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+    </style>
+</head>
+
+<body class="h-screen w-screen flex flex-col text-sm overflow-hidden font-sans">
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+            if (type === 'click') { osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); gain.gain.setValueAtTime(0.05, now); osc.start(); osc.stop(now + 0.05); }
+            else if (type === 'success') { osc.type = 'triangle'; osc.frequency.setValueAtTime(400, now); osc.frequency.linearRampToValueAtTime(800, now + 0.1); gain.gain.setValueAtTime(0.1, now); osc.start(); osc.stop(now + 0.3); }
+            else { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); gain.gain.setValueAtTime(0.1, now); osc.start(); osc.stop(now + 0.2); }
+        }
+    </script>
+
+    <div id="loginScreen" class="overlay-bg">
+        <div class="custom-modal">
+            <div
+                class="bg-gradient-to-br from-stone-100 to-stone-200 text-stone-800 p-6 rounded-b-[20px] shadow-sm mb-4">
+                <h2 id="authTitle" class="text-2xl font-serif font-bold text-amber-900">Giriş Yap</h2>
+                <p class="text-xs opacity-70 mt-1 font-medium text-stone-600">Osman Kütüphane</p>
+            </div>
+            <div class="px-6 pb-6 space-y-3 text-left">
+                <div><label class="text-[9px] font-bold text-slate-400 uppercase ml-1">Kullanıcı Adı</label><input
+                        type="text" id="username"
+                        class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-700 focus:bg-white focus:border-amber-500">
+                </div>
+                <div><label class="text-[9px] font-bold text-slate-400 uppercase ml-1">Şifre</label><input
+                        type="password" id="password"
+                        class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-700 focus:bg-white focus:border-amber-500">
+                </div>
+                <div id="registerFields" class="hidden-field space-y-3">
+                    <div><label class="text-[9px] font-bold text-slate-400 uppercase ml-1">İsim Soyisim</label><input
+                            type="text" id="fullName"
+                            class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-700">
+                    </div>
+                    <div><label class="text-[9px] font-bold text-slate-400 uppercase ml-1">Cinsiyet</label><select
+                            id="loginGender"
+                            class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-700 cursor-pointer">
+                            <option value="" disabled selected>Seçiniz</option>
+                            <option value="Erkek">Erkek 👨</option>
+                            <option value="Kadın">Kadın 👩</option>
+                        </select></div>
+                </div>
+                <button id="authBtn" onclick="handleAuth()"
+                    class="w-full mt-2 py-3 rounded-lg font-bold text-white bg-amber-700 hover:bg-amber-800 transition shadow-md">Giriş
+                    Yap</button>
+                <div class="text-center"><span id="toggleText" onclick="toggleAuthMode()" class="toggle-link">Hesabın
+                        yok mu? Üye Ol</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="customAlertModal" class="overlay-bg hidden z-[100]">
+        <div class="alert-box">
+            <div id="alertIcon" class="alert-icon">⚠️</div>
+            <h3 id="alertTitle" class="text-xl font-bold text-stone-800 mb-2">Uyarı</h3>
+            <p id="alertMessage" class="text-stone-500 mb-6 text-sm">Mesaj...</p><button onclick="closeCustomAlert()"
+                class="alert-btn bg-stone-800 text-white hover:bg-black">TAMAM</button>
+        </div>
+    </div>
+    <div id="confirmModal" class="overlay-bg hidden z-[100]">
+        <div class="alert-box">
+            <div class="text-4xl mb-4">❓</div>
+            <h3 class="text-xl font-bold text-stone-800 mb-2">Onay?</h3>
+            <p id="confirmMessage" class="text-stone-500 mb-6 text-sm">...</p><button id="confirmYesBtn"
+                class="alert-btn btn-confirm">EVET</button><button onclick="closeConfirmModal()"
+                class="alert-btn btn-cancel">HAYIR</button>
+        </div>
+    </div>
+    <div id="actionModal" class="overlay-bg hidden z-[100]">
+        <div class="alert-box">
+            <div class="text-4xl mb-4">⚙️</div>
+            <h3 class="text-xl font-bold text-stone-800 mb-2">İşlem</h3>
+            <p class="text-stone-500 mb-6 text-xs">Seçim yapınız</p>
+            <div class="space-y-2"><button id="btnBreak"
+                    class="alert-btn bg-amber-100 text-amber-800 hover:bg-amber-200" style="margin-top:0;">☕ Mola
+                    Ver</button><button id="btnCancelRes" class="alert-btn bg-red-100 text-red-700 hover:bg-red-200"
+                    style="margin-top:5px;">🗑️ İptal Et</button><button onclick="closeActionModal()"
+                    class="alert-btn btn-cancel">Vazgeç</button></div>
+        </div>
+    </div>
+    <div id="ticketModal" class="overlay-bg hidden z-[90]">
+        <div class="ticket-card" onclick="document.getElementById('ticketModal').classList.add('hidden')">
+            <div class="ticket-header">
+                <h2 class="text-lg font-bold tracking-widest text-amber-900 font-serif">GİRİŞ KARTI</h2>
+            </div>
+            <div class="ticket-body text-stone-700">
+                <div class="flex justify-between mb-3 border-b border-stone-300 pb-1">
+                    <div>
+                        <div class="text-[9px] text-stone-400 font-bold">İSİM</div>
+                        <div class="font-bold text-sm font-serif" id="ticketName">--</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[9px] text-stone-400 font-bold">MOD</div>
+                        <div class="text-lg" id="ticketMood">--</div>
+                    </div>
+                </div>
+                <div class="flex justify-between mb-3 border-b border-stone-300 pb-1">
+                    <div>
+                        <div class="text-[9px] text-stone-400 font-bold">YER</div>
+                        <div class="text-amber-700 font-bold text-lg font-serif" id="ticketSeat">--</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[9px] text-stone-400 font-bold">ZAMAN</div>
+                        <div class="font-bold text-base font-mono" id="ticketTime">--</div>
+                    </div>
+                </div>
+                <div class="barcode"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="mainApp" class="hidden flex-col h-full relative">
+        <div
+            class="bg-stone-50/70 backdrop-blur-md border-b border-white/30 px-4 py-2 flex justify-between items-center shadow-sm z-10 shrink-0 h-14">
+            <div class="flex items-center gap-2 shrink-0">
+                <span
+                    class="bg-amber-800 text-white px-2 py-1 rounded-md font-bold text-xs font-serif shadow-sm">OÖ</span>
+                <span class="font-serif font-bold text-stone-800 text-lg whitespace-nowrap hidden md:block">Osman
+                    Kütüphane</span>
+            </div>
+            <div class="marquee-container mx-2 md:mx-6 flex items-center h-full">
+                <div class="marquee-content">
+                    <span class="marquee-text">İYİ ÇALIŞMALAR LÜTFEN SESSİZ OLUNUZ !</span><span
+                        class="marquee-text">İYİ ÇALIŞMALAR LÜTFEN SESSİZ OLUNUZ !</span><span class="marquee-text">İYİ
+                        ÇALIŞMALAR LÜTFEN SESSİZ OLUNUZ !</span> 
+                </div>
+            </div>
+            <div class="flex items-center gap-3 shrink-0">
+                <div class="text-right border-r pr-3 border-stone-300">
+                    <div class="text-[9px] text-stone-500 uppercase font-bold">Aktif Üye</div>
+                    <div id="userDisplay" class="font-bold text-xs leading-none text-amber-800">--</div>
+                </div>
+                <button onclick="tryLogout()"
+                    class="text-[10px] font-bold text-stone-500 hover:text-red-600 bg-white/50 px-2 py-1 rounded border border-stone-200 transition">ÇIKIŞ</button>
+            </div>
+        </div>
+
+        <div class="flex flex-col md:flex-row flex-1 overflow-hidden">
+
+            <div
+                class="w-full h-[60%] md:h-full md:flex-1 bg-gradient-to-b from-stone-50/20 to-white/20 backdrop-blur-sm p-2 md:p-4 relative flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-stone-200">
+
+                <div class="flex gap-2 md:gap-4 mb-2 md:mb-4 w-full max-w-4xl shrink-0">
+                    <div
+                        class="flex-1 bg-white/80 backdrop-blur px-3 py-2 rounded-xl border border-white/50 shadow-soft flex items-center justify-between">
+                        <div>
+                            <div class="text-[9px] md:text-[10px] text-stone-400 font-bold uppercase">Doluluk</div>
+                            <div id="statOccupancy" class="text-xl md:text-2xl font-bold text-stone-700 font-serif">%0
+                            </div>
+                        </div>
+                        <div class="text-xl opacity-20">📊</div>
+                    </div>
+                    <div
+                        class="flex-1 bg-white/80 backdrop-blur px-3 py-2 rounded-xl border border-white/50 shadow-soft flex items-center justify-between">
+                        <div>
+                            <div class="text-[9px] md:text-[10px] text-emerald-600 font-bold uppercase">Boş Yer</div>
+                            <div id="statFree" class="text-xl md:text-2xl font-bold text-emerald-600 font-serif">90
+                            </div>
+                        </div>
+                        <div class="text-xl opacity-20">🪑</div>
+                    </div>
+                </div>
+
+                <div
+                    class="flex justify-center gap-2 mb-2 md:mb-4 bg-white/60 backdrop-blur p-1 rounded-lg shadow-sm border border-white/40 w-full max-w-md shrink-0">
+                    <button onclick="changeFloor(1)" id="btnF1"
+                        class="flex-1 py-2 bg-slate-800 text-white rounded-md text-xs font-bold shadow transition">1.
+                        Kat</button>
+                    <button onclick="changeFloor(2)" id="btnF2"
+                        class="flex-1 py-2 text-slate-500 hover:bg-slate-50 rounded-md text-xs font-bold transition">2.
+                        Kat</button>
+                    <button onclick="changeFloor(3)" id="btnF3"
+                        class="flex-1 py-2 text-blue-500 hover:bg-blue-50 rounded-md text-xs font-bold transition flex justify-center gap-1"><span>🖥️</span>
+                        PC</button>
+                </div>
+
+                <div id="seatGrid"
+                    class="grid grid-cols-6 gap-2 md:gap-3 w-full max-w-4xl h-full overflow-y-auto content-start p-1 pr-2 custom-scroll">
+                </div>
+
+                <div
+                    class="hidden md:flex gap-4 mt-2 text-[10px] font-bold text-stone-500 bg-white/90 backdrop-blur px-6 py-2 rounded-full shadow-sm border border-stone-200 shrink-0">
+                    <span class="flex items-center gap-1.5">
+                        <div class="w-2.5 h-2.5 border border-stone-300 rounded-full bg-white"></div> Boş
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <div class="w-2.5 h-2.5 bg-rose-100 border border-rose-300 rounded-full"></div> K
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <div class="w-2.5 h-2.5 bg-sky-100 border border-sky-300 rounded-full"></div> E
+                    </span>
+                    <span class="flex items-center gap-1 pl-3 border-l border-stone-200 text-orange-600">⏸ Mola</span>
+                </div>
+            </div>
+
+            <div
+                class="w-full h-[40%] md:w-72 md:h-full bg-white/80 backdrop-blur-md flex flex-col shadow-xl z-20 overflow-hidden">
+                <div class="p-4 border-b border-stone-200/50 shrink-0">
+                    <h3 class="font-bold text-xs mb-3 text-stone-800 flex items-center gap-2"><span
+                            class="bg-amber-100 text-amber-700 p-1 rounded-md">📅</span> Rezervasyon</h3>
+                    <div class="space-y-2 md:space-y-3">
+                        <div class="flex gap-2">
+                            <div class="w-1/2"><label
+                                    class="text-[9px] font-bold text-stone-400 uppercase block mb-1">Tarih</label><input
+                                    type="date" id="dateSelect"
+                                    class="w-full p-2 bg-stone-50 border border-stone-200 rounded-lg text-xs font-bold text-stone-700 cursor-pointer hover:bg-white">
+                            </div>
+                            <div class="w-1/2"><label
+                                    class="text-[9px] font-bold text-stone-400 uppercase block mb-1">Saat</label><select
+                                    id="timeSelect"
+                                    class="w-full p-2 bg-stone-50 border border-stone-200 rounded-lg text-xs font-bold text-stone-700 cursor-pointer hover:bg-white"></select>
+                            </div>
+                        </div>
+                        <div><label
+                                class="text-[9px] font-bold text-stone-400 uppercase block mb-1">Durum</label><select
+                                id="moodSelect"
+                                class="w-full p-2 bg-stone-50 border border-stone-200 rounded-lg text-xs font-bold text-stone-700 cursor-pointer hover:bg-white">
+                                <option value="📚">📚 Ders Çalışıyor</option>
+                                <option value="💻">💻 Kod Yazıyor</option>
+                                <option value="☕">☕ Molada</option>
+                                <option value="🎥">🎥 Serbest</option>
+                            </select></div>
+                        <div class="flex gap-2">
+                            <div
+                                class="flex-1 bg-stone-50 p-2 md:p-3 rounded-lg border border-stone-100 flex justify-between items-center">
+                                <span class="text-[10px] text-stone-400 font-bold uppercase">Seçim:</span><span
+                                    id="selectedInfo" class="font-bold text-xs text-stone-800">--</span>
+                            </div>
+                            <button onclick="saveReservation()"
+                                class="flex-1 bg-amber-800 text-white py-2 md:py-3 rounded-lg font-bold shadow-md hover:bg-amber-900 transition text-xs tracking-widest">ONAYLA</button>
+                        </div>
+                        <div id="seatFeatureBadge"
+                            class="hidden text-[10px] text-center bg-amber-50 text-amber-900 py-1 rounded border border-amber-100 font-bold">
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-1 flex flex-col overflow-hidden bg-stone-50/20">
+                    <div class="px-4 py-2 border-b border-stone-50/50 bg-white/30 backdrop-blur">
+                        <h4 class="font-bold text-[10px] text-stone-400 uppercase tracking-widest">Canlı Liste</h4>
+                    </div>
+                    <div id="liveList" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBmRFFSu7xWrWiEiUBvAgQ8bJvu0DQ9P30",
+            authDomain: "kutuhane-c5a29.firebaseapp.com",
+            databaseURL: "https://kutuhane-c5a29-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "kutuhane-c5a29",
+            storageBucket: "kutuhane-c5a29.firebasestorage.app",
+            messagingSenderId: "429741544069",
+            appId: "1:429741544069:web:17e5dea690d255e7808fec"
+        };
+
+        let db, currentUser = null, currentFloor = 1, selectedSeat = null, allData = {}, isAdmin = false;
+        let isLoginMode = true;
+        let confirmCallback = null;
+
+        function openAlert(msg, type = 'info') {
+            const modal = document.getElementById('customAlertModal');
+            document.getElementById('alertMessage').innerText = msg;
+            modal.classList.remove('hidden');
+            if (type === 'success') playSound('success');
+            else if (type === 'error') playSound('click');
+        }
+        function closeCustomAlert() { document.getElementById('customAlertModal').classList.add('hidden'); }
+
+        function openConfirm(msg, callback) {
+            const modal = document.getElementById('confirmModal');
+            document.getElementById('confirmMessage').innerText = msg;
+            confirmCallback = callback;
+            modal.classList.remove('hidden');
+            document.getElementById('confirmYesBtn').onclick = function () {
+                if (confirmCallback) confirmCallback();
+                closeConfirmModal();
+            };
+        }
+        function closeConfirmModal() { document.getElementById('confirmModal').classList.add('hidden'); confirmCallback = null; }
+
+        function openActionModal(id) {
+            const modal = document.getElementById('actionModal');
+            modal.classList.remove('hidden');
+            document.getElementById('btnBreak').onclick = () => { startBreak(id); closeActionModal(); };
+            document.getElementById('btnCancelRes').onclick = () => { deleteRes(id); closeActionModal(); };
+        }
+        function closeActionModal() { document.getElementById('actionModal').classList.add('hidden'); }
+
+        function showTicket(data) {
+            document.getElementById('ticketName').innerText = data.user;
+            document.getElementById('ticketMood').innerText = data.mood;
+            document.getElementById('ticketSeat').innerText = data.floor === 3 ? `PC-${data.seat}` : `${data.floor}/${data.seat}`;
+            document.getElementById('ticketTime').innerText = data.time;
+            document.getElementById('ticketModal').classList.remove('hidden');
+            playSound('success');
+        }
+
+        function checkLoginStatus() {
+            const storedUser = localStorage.getItem('osmanstajUser');
+            if (storedUser) {
+                currentUser = JSON.parse(storedUser);
+                document.getElementById('userDisplay').innerText = currentUser.isAdmin ? "YÖNETİCİ" : currentUser.name;
+                isAdmin = currentUser.isAdmin || false;
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('mainApp').classList.add('flex');
+            } else {
+                document.getElementById('loginScreen').classList.remove('hidden');
+                document.getElementById('mainApp').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('flex');
+            }
+        }
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            const title = document.getElementById('authTitle');
+            const btn = document.getElementById('authBtn');
+            const toggleText = document.getElementById('toggleText');
+            const registerFields = document.getElementById('registerFields');
+
+            if (isLoginMode) {
+                title.innerText = "Giriş Yap"; btn.innerText = "Giriş Yap"; toggleText.innerText = "Hesabın yok mu? Üye Ol";
+                registerFields.classList.add('hidden-field'); registerFields.style.display = 'none';
+            } else {
+                title.innerText = "Üye Ol"; btn.innerText = "Kaydı Tamamla"; toggleText.innerText = "Zaten üye misin? Giriş Yap";
+                registerFields.classList.remove('hidden-field'); registerFields.style.display = 'block';
+            }
+        }
+
+        function handleAuth() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            if (username.length < 3 || password.length < 4) return openAlert("Kullanıcı adı en az 3, şifre en az 4 karakter.", "error");
+            if (isLoginMode) loginUser(username, password); else registerUser(username, password);
+        }
+
+        function registerUser(username, password) {
+            const fullName = document.getElementById('fullName').value.trim();
+            const gender = document.getElementById('loginGender').value;
+            if (fullName.length < 3 || !gender) return openAlert("Tüm alanları doldurun.", "error");
+            db.ref('users/' + username).once('value', (snapshot) => {
+                if (snapshot.exists()) openAlert("Bu kullanıcı adı alınmış!", "error");
+                else {
+                    const newUser = { username: username, password: password, name: fullName, gender: gender, isAdmin: false };
+                    db.ref('users/' + username).set(newUser).then(() => { openAlert("Kayıt Başarılı! Giriş yapılıyor...", "success"); loginUser(username, password); });
+                }
+            });
+        }
+
+        function loginUser(username, password) {
+            if (username === "admin" && password === "1234") {
+                currentUser = { name: "SİSTEM YÖNETİCİSİ", username: "admin", gender: "Erkek", isAdmin: true };
+                isAdmin = true;
+                localStorage.setItem('osmanstajUser', JSON.stringify(currentUser));
+                document.getElementById('userDisplay').innerText = "YÖNETİCİ";
+                playSound('click');
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('mainApp').classList.add('flex');
+                return;
+            }
+
+            db.ref('users/' + username).once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    if (userData.password === password) {
+                        currentUser = { name: userData.name, gender: userData.gender, username: userData.username, isAdmin: false };
+                        localStorage.setItem('osmanstajUser', JSON.stringify(currentUser));
+                        document.getElementById('userDisplay').innerText = userData.name;
+                        playSound('click');
+                        document.getElementById('loginScreen').classList.add('hidden');
+                        document.getElementById('mainApp').classList.remove('hidden');
+                        document.getElementById('mainApp').classList.add('flex');
+                    } else openAlert("Hatalı şifre!", "error");
+                } else openAlert("Kullanıcı bulunamadı!", "error");
+            });
+        }
+
+        function tryLogout() {
+            openConfirm("Çıkış yapmak istediğinize emin misiniz?", () => {
+                localStorage.removeItem('osmanstajUser'); location.reload();
+            });
+        }
+
+        // --- GELİŞTİRİLEN SİSTEM MANTIĞI: AKILLI SAAT ---
+        function initSystem() {
+            checkLoginStatus();
+            const dateInput = document.getElementById('dateSelect');
+            const now = new Date();
+            
+            // Asıl "bugün" değerini bul ve geçmişi seçmeyi engelle
+            const localNow = new Date(now);
+            localNow.setMinutes(localNow.getMinutes() - localNow.getTimezoneOffset());
+            dateInput.min = localNow.toISOString().split('T')[0];
+
+            // Saat 22:30'u geçtiyse sistemi otomatik olarak ertesi güne ayarla
+            if(now.getHours() >= 23 || (now.getHours() === 22 && now.getMinutes() >= 30)) {
+                now.setDate(now.getDate() + 1);
+            }
+            
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            dateInput.value = now.toISOString().split('T')[0];
+
+            dateInput.addEventListener('change', () => { updateTimeSlots(); refreshView(); });
+            document.getElementById('timeSelect').addEventListener('change', refreshView);
+
+            updateTimeSlots();
+            setTimeout(() => { refreshView(); }, 1000);
+        }
+
+        function updateTimeSlots() {
+            const select = document.getElementById('timeSelect');
+            const selectedDate = document.getElementById('dateSelect').value;
+            
+            const d = new Date();
+            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            const localTodayStr = d.toISOString().split('T')[0];
+            const isToday = (selectedDate === localTodayStr);
+            
+            const currentHour = new Date().getHours();
+            const currentMinute = new Date().getMinutes();
+
+            select.innerHTML = '<option value="" disabled selected>Seç</option>';
+            
+            for (let h = 9; h < 23; h++) {
+                let hourStr = h < 10 ? '0' + h : h;
+                
+                // 00 dakikası için geçmiş saat engeli
+                if (!(isToday && (h < currentHour || (h === currentHour && currentMinute > 0)))) {
+                    select.innerHTML += `<option value="${hourStr}:00">${hourStr}:00</option>`;
+                }
+                // 30 dakikası için geçmiş saat engeli
+                if (!(isToday && (h < currentHour || (h === currentHour && currentMinute > 30)))) {
+                    select.innerHTML += `<option value="${hourStr}:30">${hourStr}:30</option>`;
+                }
+            }
+
+            if (select.options.length === 1 && isToday) {
+                select.innerHTML = '<option value="" disabled selected>Bugün Süre Bitti</option>';
+            } else if(select.options.length > 1) {
+                select.selectedIndex = 1; // Seçenek varsa ilk uygun saati otomatik seç
+            }
+        }
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            db.ref('reservations').on('value', (snap) => { allData = snap.val() || {}; refreshView(); });
+        } catch (e) { console.error(e); }
+
+        function refreshView() {
+            const date = document.getElementById('dateSelect').value;
+            const time = document.getElementById('timeSelect').value;
+            renderGrid(date, time); renderList(date, time); updateStats(date, time);
+        }
+
+        function renderGrid(date, time) {
+            const grid = document.getElementById('seatGrid'); grid.innerHTML = "";
+            for (let i = 1; i <= 30; i++) {
+                const cleanTime = time ? time.replace(':', '-') : '00-00';
+                const id = `${date}_${cleanTime}_${currentFloor}_${i}`;
+                const record = allData[id];
+                const btn = document.createElement('div');
+                const isPC = currentFloor === 3;
+                const hasSocket = (i % 5 === 0) || isPC;
+                const hasWindow = (i === 1 || i % 6 === 0);
+
+                let iconsHtml = "";
+                if (hasSocket) { if (isPC) iconsHtml += `<span class="feature-icon icon-top-right bg-transparent border-none text-white shadow-none text-xs" style="text-shadow: 0 0 2px black;">⚡</span>`; else iconsHtml += `<span class="feature-icon icon-top-right">⚡</span>`; }
+                if (hasWindow) iconsHtml += `<span class="feature-icon icon-bottom-right">☀️</span>`;
+
+                let css = "seat w-full h-12 md:h-16 rounded-xl flex items-center justify-center font-bold text-xl cursor-pointer seat-available shadow-md border border-stone-200 transition-all";
+                let text = i;
+                let innerStyle = "";
+
+                if (isPC) { css = "seat w-full h-12 md:h-16 rounded-lg flex flex-col items-center justify-center font-bold text-lg cursor-pointer shadow-md seat-pc text-amber-400"; text = `PC${i}`; }
+
+                if (!time || time === "") { css += " opacity-40 cursor-not-allowed"; }
+                else if (record) {
+                    let timeLabel = `<span class="seat-time">${record.time}</span>`;
+
+                    if (record.onBreak) {
+                        css = "seat w-full h-12 md:h-16 rounded-xl flex items-center justify-center font-bold text-xl cursor-pointer seat-break shadow-md";
+                        text = "⏸";
+                        if (record.user === currentUser.name) {
+                            btn.onclick = () => openConfirm("Mola bitirilsin mi?", () => endBreak(id));
+                        } else {
+                            btn.onclick = () => openAlert(`${record.user} şu an molada.`);
+                        }
+                    }
+                    else {
+                        if (record.user === currentUser.name) {
+                            css = "seat w-full h-12 md:h-16 rounded-xl flex items-center justify-center font-bold text-sm cursor-pointer bg-emerald-700 text-white border-emerald-800 shadow-md transform scale-105 shadow-emerald-200/50"; text = "✓"; innerStyle = "font-size:1.5rem";
+                            btn.onclick = () => openActionModal(id);
+                        } else {
+                            css = record.gender === 'Kadın' ? (isPC ? css + " bg-rose-900/50 border-rose-800" : "seat w-full h-12 md:h-16 rounded-xl flex items-center justify-center text-sm seat-female shadow-sm")
+                                : (isPC ? css + " bg-sky-900/50 border-sky-800" : "seat w-full h-12 md:h-16 rounded-xl flex items-center justify-center text-sm seat-male shadow-sm");
+                            text = record.mood || (record.gender === 'Kadın' ? '👩' : '👨');
+                            innerStyle = "font-size:1.5rem md:font-size:2rem";
+                            btn.onclick = () => { if (isAdmin) openConfirm(`YÖNETİCİ: ${record.user} atılsın mı?`, () => deleteRes(id)); else openAlert(`${record.user}: ${record.mood}`, "info"); };
+                        }
+                    }
+                    btn.className = css;
+                    btn.innerHTML = `<span style="${innerStyle}" class="flex flex-col items-center justify-center leading-none">${text}</span>${timeLabel}` + iconsHtml;
+                    grid.appendChild(btn);
+                    continue;
+                }
+
+                if (selectedSeat === i) {
+                    css = "seat w-full h-12 md:h-16 rounded-xl flex flex-col items-center justify-center font-bold text-[10px] cursor-pointer bg-stone-800 text-white shadow-lg transform scale-105 ring-4 ring-amber-400";
+                    text = `🎯 <span class="text-[9px] mt-0.5">${i}</span>`;
+                    btn.onclick = () => { selectedSeat = null; refreshView(); updateInfo(); };
+                }
+                else {
+                    css = css.replace('items-center', 'flex-col items-center justify-center gap-0');
+                    const chairIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-60 md:w-5 md:h-5"><path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v2H7v-2a2 2 0 0 0-4 0Z"/><path d="M5 18v2"/><path d="M19 18v2"/></svg>`;
+                    text = `${chairIcon}<span class="text-xs md:text-sm font-bold text-stone-400">${i}</span>`;
+                    btn.onclick = () => { playSound('click'); selectedSeat = i; refreshView(); updateInfo(hasSocket); };
+                }
+                btn.className = css;
+                btn.innerHTML = `<span style="${innerStyle}" class="flex flex-col items-center justify-center">${text}</span>` + iconsHtml;
+                grid.appendChild(btn);
+            }
+        }
+
+        function startBreak(id) { db.ref('reservations/' + id).update({ onBreak: true }).then(() => openAlert("Mola Modu Aktif!", "success")); }
+        function endBreak(id) { db.ref('reservations/' + id).update({ onBreak: false }).then(() => openAlert("Mola bitti.", "success")); }
+
+        function updateStats(date, time) {
+            if (!time) return;
+            const prefix = `${date}_${time.replace(':', '-')}_`;
+            const recs = Object.keys(allData).filter(k => k.startsWith(prefix)).map(k => allData[k]);
+            const occ = Math.round((recs.length / 90) * 100);
+            const free = 90 - recs.length;
+            document.getElementById('statOccupancy').innerText = `%${occ}`;
+            document.getElementById('statFree').innerText = free;
+        }
+
+        function renderList(date, time) {
+            const list = document.getElementById('liveList'); list.innerHTML = "";
+            if (!time) { list.innerHTML = "<div class='text-center text-xs text-stone-400 py-4'>Saat seçiniz</div>"; return; }
+            const prefix = `${date}_${time.replace(':', '-')}_`;
+            const recs = Object.keys(allData).filter(k => k.startsWith(prefix)).map(k => allData[k]);
+            if (recs.length === 0) { list.innerHTML = "<div class='text-center text-xs text-stone-400 py-4'>Boş</div>"; return; }
+            recs.forEach(r => {
+                const style = r.gender === 'Kadın' ? 'bg-rose-50 border border-rose-100 text-rose-900' : 'bg-sky-50 border border-sky-100 text-sky-900';
+                const status = r.onBreak ? "⏸ Mola" : (r.mood || "");
+                list.innerHTML += `<div class="p-2.5 rounded-lg mb-2 ${style} flex justify-between items-center shadow-sm"><span class="text-xs font-bold flex items-center gap-2"><span class="text-sm">${status}</span> ${r.user}</span><span class="text-[9px] opacity-70 bg-white/50 px-1.5 py-0.5 rounded">${r.floor}. Kat / ${r.seat}</span></div>`;
+            });
+        }
+
+        function saveReservation() {
+            if (!selectedSeat || !document.getElementById('timeSelect').value) return openAlert("Eksik bilgi!", "error");
+            const date = document.getElementById('dateSelect').value; const time = document.getElementById('timeSelect').value;
+            const id = `${date}_${time.replace(':', '-')}_${currentFloor}_${selectedSeat}`;
+            if (allData[id]) return openAlert("Koltuk Dolu!", "error");
+            const data = { user: currentUser.name, gender: currentUser.gender, mood: document.getElementById('moodSelect').value, floor: currentFloor, seat: selectedSeat, time: time, date: date, onBreak: false };
+            db.ref('reservations/' + id).set(data).then(() => { showTicket(data); selectedSeat = null; refreshView(); updateInfo(); });
+        }
+
+        function deleteRes(id) { db.ref('reservations/' + id).remove(); }
+        function updateInfo(socket) {
+            document.getElementById('selectedInfo').innerText = selectedSeat ? `${currentFloor}. Kat / ${selectedSeat}` : "--";
+            const badge = document.getElementById('seatFeatureBadge');
+            if (selectedSeat && (socket || currentFloor === 3)) { badge.innerText = currentFloor === 3 ? "💻 PC MASALARI" : "⚡ Priz Mevcut"; badge.classList.remove('hidden'); } else badge.classList.add('hidden');
+        }
+
+        function changeFloor(f) {
+            playSound('click');
+            currentFloor = f; selectedSeat = null;
+            document.getElementById('btnF1').className = f === 1 ? "flex-1 py-2 bg-stone-800 text-white rounded-md text-xs font-bold shadow transition" : "flex-1 py-2 text-stone-500 hover:bg-stone-50 rounded-md text-xs font-bold transition";
+            document.getElementById('btnF2').className = f === 2 ? "flex-1 py-2 bg-stone-800 text-white rounded-md text-xs font-bold shadow transition" : "flex-1 py-2 text-stone-500 hover:bg-stone-50 rounded-md text-xs font-bold transition";
+            document.getElementById('btnF3').className = f === 3 ? "flex-1 py-2 bg-amber-700 text-white rounded-md text-xs font-bold shadow shadow-amber-200 transition flex justify-center gap-1" : "flex-1 py-2 text-amber-600 hover:bg-amber-50 rounded-md text-xs font-bold transition flex justify-center gap-1";
+            refreshView(); updateInfo();
+        }
+
+        initSystem();
+    </script>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('PWA Service Worker aktif!'))
+                    .catch(err => console.error('PWA hatası:', err));
+            });
+        }
+    </script>
+</body>
+
+</html>
