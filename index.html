@@ -375,35 +375,16 @@
         let hasPlayedWelcome = false;
         function playWelcomeSound() {
             if (hasPlayedWelcome) return;
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume().catch(() => {});
-            }
-            
-            // Tarayıcı otomatik çalmayı engelliyorsa ve resume başarısız olduysa ertele
-            if (audioCtx.state === 'suspended') return;
-
             hasPlayedWelcome = true;
-            const now = audioCtx.currentTime;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
 
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.type = 'sine';
+            // Kendi müziğini çalması için Audio objesi:
+            const welcomeMusic = new Audio('taktak.mp3'); // Müzik dosyanın adı burada!
+            welcomeMusic.volume = 0.5; // Ses seviyesi (0.0 ile 1.0 arası)
 
-            // Hoşgeldin jenerik melodisi: Do - Mi - Sol - İnce Do
-            osc.frequency.setValueAtTime(523.25, now); 
-            osc.frequency.setValueAtTime(659.25, now + 0.15); 
-            osc.frequency.setValueAtTime(783.99, now + 0.3); 
-            osc.frequency.setValueAtTime(1046.50, now + 0.45); 
-
-            gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
-            gain.gain.setValueAtTime(0.1, now + 0.45);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-
-            osc.start(now);
-            osc.stop(now + 1.2);
+            // Tarayıcı otomatik çalmayı engellediyse, hatayı yakalayıp ilk tıklamada tekrar denemesini sağlıyoruz
+            welcomeMusic.play().catch(error => {
+                hasPlayedWelcome = false;
+            });
         }
 
         // Tarayıcılar otomatik ses çalmayı engelleyebilir, 
@@ -525,7 +506,7 @@
                 <div class="marquee-content">
                     <span class="marquee-text">İYİ ÇALIŞMALAR LÜTFEN SESSİZ OLUNUZ !</span><span
                         class="marquee-text">İYİ ÇALIŞMALAR LÜTFEN SESSİZ OLUNUZ !</span><span class="marquee-text">İYİ
-                        ÇALIŞMALAR LÜTFEN SESSİZ OLUNUZ !</span> 
+                        ÇALIŞMALAR LÜTFEN SESSİZ OLUNUZ !</span>
                 </div>
             </div>
             <div class="flex items-center gap-3 shrink-0">
@@ -792,17 +773,17 @@
             checkLoginStatus();
             const dateInput = document.getElementById('dateSelect');
             const now = new Date();
-            
+
             // Asıl "bugün" değerini bul ve geçmişi seçmeyi engelle
             const localNow = new Date(now);
             localNow.setMinutes(localNow.getMinutes() - localNow.getTimezoneOffset());
             dateInput.min = localNow.toISOString().split('T')[0];
 
             // Saat 22:30'u geçtiyse sistemi otomatik olarak ertesi güne ayarla
-            if(now.getHours() >= 23 || (now.getHours() === 22 && now.getMinutes() >= 30)) {
+            if (now.getHours() >= 23 || (now.getHours() === 22 && now.getMinutes() >= 30)) {
                 now.setDate(now.getDate() + 1);
             }
-            
+
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             dateInput.value = now.toISOString().split('T')[0];
 
@@ -816,20 +797,20 @@
         function updateTimeSlots() {
             const select = document.getElementById('timeSelect');
             const selectedDate = document.getElementById('dateSelect').value;
-            
+
             const d = new Date();
             d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
             const localTodayStr = d.toISOString().split('T')[0];
             const isToday = (selectedDate === localTodayStr);
-            
+
             const currentHour = new Date().getHours();
             const currentMinute = new Date().getMinutes();
 
             select.innerHTML = '<option value="" disabled selected>Seç</option>';
-            
+
             for (let h = 9; h < 23; h++) {
                 let hourStr = h < 10 ? '0' + h : h;
-                
+
                 // 00 dakikası için geçmiş saat engeli
                 if (!(isToday && (h < currentHour || (h === currentHour && currentMinute > 0)))) {
                     select.innerHTML += `<option value="${hourStr}:00">${hourStr}:00</option>`;
@@ -842,7 +823,7 @@
 
             if (select.options.length === 1 && isToday) {
                 select.innerHTML = '<option value="" disabled selected>Bugün Süre Bitti</option>';
-            } else if(select.options.length > 1) {
+            } else if (select.options.length > 1) {
                 select.selectedIndex = 1; // Seçenek varsa ilk uygun saati otomatik seç
             }
         }
@@ -981,7 +962,7 @@
 
         initSystem();
     </script>
-    
+
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
