@@ -361,12 +361,15 @@
             background-color: #121212 !important;
             color: #d1d5db !important;
         }
+
         body.dark-mode::before {
             filter: brightness(0.3) saturate(0.8) contrast(1.2);
         }
+
         body.dark-mode::after {
             background: linear-gradient(to bottom, rgba(15, 23, 42, 0.8), rgba(0, 0, 0, 0.9));
         }
+
         body.dark-mode .bg-white,
         body.dark-mode .bg-white\/80,
         body.dark-mode .bg-white\/60,
@@ -383,6 +386,7 @@
             border-color: #334155 !important;
             color: #cbd5e1 !important;
         }
+
         body.dark-mode .text-stone-800,
         body.dark-mode .text-stone-700,
         body.dark-mode .text-stone-600,
@@ -391,39 +395,46 @@
         body.dark-mode .text-slate-700 {
             color: #f1f5f9 !important;
         }
+
         body.dark-mode .seat-available {
             background: #1e293b !important;
             border-color: #334155 !important;
             color: #94a3b8 !important;
         }
+
         body.dark-mode .seat-female {
             background: #4c1d95 !important;
             border-color: #7c3aed !important;
             color: #ddd6fe !important;
         }
+
         body.dark-mode .seat-male {
             background: #0f172a !important;
             border-color: #38bdf8 !important;
             color: #bae6fd !important;
         }
+
         body.dark-mode .seat-time {
             background: rgba(0, 0, 0, 0.6) !important;
             color: #f8fafc !important;
         }
+
         body.dark-mode input,
         body.dark-mode select {
             background-color: #0f172a !important;
             color: #f8fafc !important;
             border-color: #475569 !important;
         }
+
         body.dark-mode .custom-modal,
         body.dark-mode .alert-box,
         body.dark-mode .ticket-card {
             background-color: #1e293b !important;
             border-color: #334155 !important;
             color: #f1f5f9 !important;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.8);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
         }
+
         body.dark-mode .border-b,
         body.dark-mode .border-r,
         body.dark-mode .border-l {
@@ -442,21 +453,24 @@
             padding: 10px 15px;
             font-size: 1.2rem;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
         }
+
         #themeToggleBtn:hover {
             transform: scale(1.1);
             background-color: #334155;
         }
+
         body.dark-mode #themeToggleBtn {
             background-color: #f8fafc;
             color: #0f172a;
             border-color: #cbd5e1;
         }
+
         body.dark-mode #themeToggleBtn:hover {
             background-color: #e2e8f0;
         }
@@ -877,26 +891,26 @@
             if (!allData || Object.keys(allData).length === 0) return;
 
             const now = new Date();
-            
+
             Object.keys(allData).forEach(id => {
                 const record = allData[id];
                 if (!record.date || !record.time) return;
-                
+
                 const parts = record.date.split('-');
                 if (parts.length !== 3) return;
                 const year = parseInt(parts[0], 10);
                 const month = parseInt(parts[1], 10) - 1;
                 const day = parseInt(parts[2], 10);
-                
+
                 const timeParts = record.time.split(':');
                 if (timeParts.length !== 2) return;
                 const hours = parseInt(timeParts[0], 10);
                 const minutes = parseInt(timeParts[1], 10);
-                
+
                 const reservationStart = new Date(year, month, day, hours, minutes, 0, 0);
-                // Mola bittiği (yarım saatlik süre sona erdiği) anki zaman:
-                const expirationTime = new Date(reservationStart.getTime() + 30 * 60000);
-                
+                // 2 saatlik süre (120 dakika) bittiği anki zaman:
+                const expirationTime = new Date(reservationStart.getTime() + 120 * 60000);
+
                 if (now >= expirationTime) {
                     db.ref('reservations/' + id).remove();
                 }
@@ -947,16 +961,13 @@
 
             select.innerHTML = '<option value="" disabled selected>Seç</option>';
 
-            for (let h = 9; h < 23; h++) {
+            // 09:00'dan başlayıp 2 saat aralıklarla seçenekleri ekle
+            for (let h = 9; h < 23; h += 2) {
                 let hourStr = h < 10 ? '0' + h : h;
 
-                // 00 dakikası için geçmiş saat engeli
+                // Geçmiş saat engeli
                 if (!(isToday && (h < currentHour || (h === currentHour && currentMinute > 0)))) {
                     select.innerHTML += `<option value="${hourStr}:00">${hourStr}:00</option>`;
-                }
-                // 30 dakikası için geçmiş saat engeli
-                if (!(isToday && (h < currentHour || (h === currentHour && currentMinute > 30)))) {
-                    select.innerHTML += `<option value="${hourStr}:30">${hourStr}:30</option>`;
                 }
             }
 
