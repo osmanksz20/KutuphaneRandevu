@@ -945,6 +945,28 @@
             // Sistemi her dakika temizle
             setInterval(cleanupExpiredReservations, 60000);
             setTimeout(cleanupExpiredReservations, 2000); // Açılışta var olan birikmeleri de temizle
+
+            // ENTER Tusu global yakalayici
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    // Eger login ekrani aciksa
+                    if (!document.getElementById('loginScreen').classList.contains('hidden')) {
+                        handleAuth();
+                    }
+                    // Eger uyari (alert) ekrani aciksa
+                    else if (!document.getElementById('customAlertModal').classList.contains('hidden')) {
+                        closeCustomAlert();
+                    }
+                    // Eger bilet gorme modal aciksa
+                    else if (!document.getElementById('ticketModal').classList.contains('hidden')) {
+                        document.getElementById('ticketModal').classList.add('hidden');
+                    }
+                    // Eger "Emin misiniz" onay modali aciksa
+                    else if (!document.getElementById('confirmModal').classList.contains('hidden')) {
+                        document.getElementById('confirmYesBtn').click();
+                    }
+                }
+            });
         }
 
         function updateTimeSlots() {
@@ -974,7 +996,7 @@
             if (select.options.length === 1 && isToday) {
                 select.innerHTML = '<option value="" disabled selected>Bugün Süre Bitti</option>';
             } else if (select.options.length > 1) {
-                select.selectedIndex = 1; // Seçenek varsa ilk uygun saati otomatik sec
+                select.selectedIndex = 1; // Secenek varsa ilk uygun saati otomatik sec
             }
         }
 
