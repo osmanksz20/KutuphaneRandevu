@@ -873,6 +873,36 @@
             });
         }
 
+        function cleanupExpiredReservations() {
+            if (!allData || Object.keys(allData).length === 0) return;
+
+            const now = new Date();
+            
+            Object.keys(allData).forEach(id => {
+                const record = allData[id];
+                if (!record.date || !record.time) return;
+                
+                const parts = record.date.split('-');
+                if (parts.length !== 3) return;
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const day = parseInt(parts[2], 10);
+                
+                const timeParts = record.time.split(':');
+                if (timeParts.length !== 2) return;
+                const hours = parseInt(timeParts[0], 10);
+                const minutes = parseInt(timeParts[1], 10);
+                
+                const reservationStart = new Date(year, month, day, hours, minutes, 0, 0);
+                // Mola bittiği (yarım saatlik süre sona erdiği) anki zaman:
+                const expirationTime = new Date(reservationStart.getTime() + 30 * 60000);
+                
+                if (now >= expirationTime) {
+                    db.ref('reservations/' + id).remove();
+                }
+            });
+        }
+
         // --- GELİŞTİRİLEN SİSTEM MANTIĞI: AKILLI SAAT ---
         function initSystem() {
             checkLoginStatus();
@@ -897,6 +927,10 @@
 
             updateTimeSlots();
             setTimeout(() => { refreshView(); }, 1000);
+
+            // Sistemi her dakika temizle
+            setInterval(cleanupExpiredReservations, 60000);
+            setTimeout(cleanupExpiredReservations, 2000); // Açılışta var olan birikmeleri de temizle
         }
 
         function updateTimeSlots() {
