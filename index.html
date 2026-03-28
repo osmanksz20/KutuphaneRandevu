@@ -996,6 +996,24 @@
             });
         }
 
+        function cleanupExpiredOrders() {
+            if (!allOrders || Object.keys(allOrders).length === 0) return;
+
+            const now = new Date().getTime();
+
+            Object.keys(allOrders).forEach(id => {
+                const order = allOrders[id];
+                if (!order.timestamp) return;
+
+                // 2 saatlik süre (120 dakika) bittiği anki zaman:
+                const expirationTime = order.timestamp + 120 * 60000;
+
+                if (now >= expirationTime) {
+                    db.ref('orders/' + id).remove();
+                }
+            });
+        }
+
         // --- GELİŞTİRİLEN SİSTEM MANTIĞI: AKILLI SAAT ---
         function initSystem() {
             checkLoginStatus();
@@ -1024,6 +1042,10 @@
             // Sistemi her dakika temizle
             setInterval(cleanupExpiredReservations, 60000);
             setTimeout(cleanupExpiredReservations, 2000); // Açılışta var olan birikmeleri de temizle
+
+            // Siparişleri de her dakika temizle (2 saatten eski olanları)
+            setInterval(cleanupExpiredOrders, 60000);
+            setTimeout(cleanupExpiredOrders, 2000);
 
             // ENTER Tusu global yakalayici
             document.addEventListener('keydown', function (e) {
