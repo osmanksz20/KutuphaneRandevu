@@ -1,0 +1,44 @@
+{
+  "name": "osman-kutuphane-staj1",
+  "version": "1.1.0",
+  "description": "Kütüphane Masaüstü Uygulaması",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder -w"
+  },
+  "build": {
+    "appId": "com.osman.kutuphane",
+    "productName": "Osman Kütüphane",
+    "win": {
+      "target": "nsis",
+      "icon": "favicon.png"
+    },
+    "mac": {
+      "target": "zip",
+      "icon": "favicon.png"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/osmanksz20/KutuphaneRandevu.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/osmanksz20/KutuphaneRandevu/issues"
+  },
+  "homepage": "https://github.com/osmanksz20/KutuphaneRandevu#readme",
+  "devDependencies": {
+    "electron": "^41.1.0",
+    "electron-builder": "^26.8.1"
+  }
+}
