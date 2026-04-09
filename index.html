@@ -1295,7 +1295,7 @@
             if (selectedSeat) {
                 document.getElementById('cafeSeat').value = selectedSeat;
             } else {
-                // Kat bazındaki rezervasyonlarını kontrol edip bulmaya çalışalım
+
                 let foundSeat = "";
                 for (let key in allData) {
                     if (allData[key].user === currentUser.name) {
@@ -1420,7 +1420,7 @@
             db.ref('orders/' + id).update({ status: newStatus });
         }
 
-        // --- RAPORLAMA SİSTEMİ EKLENTİSİ ---
+        // Raporlama Sistemi
         let allReports = {};
 
         function requestReport(resId, reportedUser, floor, seat) {
